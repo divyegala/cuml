@@ -23,6 +23,9 @@
 #include <glm/qn/qn_solvers.h>
 #include <matrix/math.h>
 #include <common/device_buffer.hpp>
+#include <matrix/matrix.h>
+#include <linalg/reduce.h>
+#include <utils.h>
 
 namespace ML {
 namespace GLM {
@@ -112,6 +115,9 @@ void qnPredict(const cumlHandle_impl &handle, T *Xptr, int N, int D, int C,
   SimpleMat<T> W(params, C, dims.dims);
   linearFwd(handle, Z, X, W, stream);
 
+  MLCommon::device_buffer<T> tmp1(handle.getDeviceAllocator(), stream, C * N);
+  SimpleMat<T> proba(tmp1.data(), C, N);
+
   switch (loss_type) {
     case 0: {
       ASSERT(C == 1, "qn.h: logistic loss invalid C");
@@ -120,6 +126,11 @@ void qnPredict(const cumlHandle_impl &handle, T *Xptr, int N, int D, int C,
         return T(0);
       };
       P.assign_unary(Z, thresh, stream);
+
+      auto calc_prob = [] __device__(const T z) {
+        return 1 / (1 + MLCommon::myExp(-z));
+      };
+      proba.assign_unary(proba, calc_prob, stream);
     } break;
     case 1: {
       ASSERT(C == 1, "qn.h: squared loss invalid C");
@@ -128,6 +139,14 @@ void qnPredict(const cumlHandle_impl &handle, T *Xptr, int N, int D, int C,
     case 2: {
       ASSERT(C > 1, "qn.h: softmax invalid C");
       MLCommon::Matrix::argmax(Z.data, C, N, preds, stream);
+
+      auto exp = [] __device__(const T z) {
+        return MLCommon::myExp(z);
+      };
+      proba.assign_unary(Z, exp, stream);
+      MLCommon::device_buffer<T> red(handle.getDeviceAllocator(), stream, N);
+      MLCommon::LinAlg::reduce<T> (red.data(), proba.data, N, C, (T) 0.0, false, false, stream);
+      MLCommon::Matrix::matrixVectorBinaryDiv<T> (proba.data, red.data(), C, N, false, true, stream);
     } break;
     default: {
       ASSERT(false, "qn.h: unknown loss function.");
