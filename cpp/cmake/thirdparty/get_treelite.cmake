@@ -16,7 +16,7 @@
 
 function(find_and_configure_treelite)
 
-    set(oneValueArgs VERSION PINNED_TAG PKG_BUILD_STATIC_LIBS)
+    set(oneValueArgs VERSION PINNED_TAG BUILD_STATIC_LIBS)
     cmake_parse_arguments(PKG "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN} )
 
