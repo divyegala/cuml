@@ -20,6 +20,7 @@ function(find_and_configure_treelite)
     cmake_parse_arguments(PKG "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN} )
 
+    message(VERBOSE "CUML: In treelite func, static: ${PKG_BUILD_STATIC_LIBS}")
     if(NOT PKG_BUILD_STATIC_LIBS)
         list(APPEND TREELITE_LIBS treelite::treelite treelite::treelite_runtime)
     else()
