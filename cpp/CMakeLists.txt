@@ -383,7 +383,6 @@ if(BUILD_CUML_CPP_LIBRARY)
   target_link_libraries(${CUML_CPP_TARGET}
     PUBLIC
       raft::raft
-      raft::nn
       raft::distance
     PRIVATE
       CUDA::cufft
