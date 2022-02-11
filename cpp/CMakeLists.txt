@@ -239,7 +239,8 @@ if(BUILD_CUML_CPP_LIBRARY)
     PRIVATE
       src/fil/fil.cu
       src/fil/infer.cu
-      src/fil/treelite_import.cu)
+      src/fil/treelite_import.cu
+      src/explainer/tree_shap.cu)
 
   # Rest of the algorithms
   if(CUML_CPP_ALGORITHMS STREQUAL "ALL")
