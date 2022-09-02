@@ -21,6 +21,7 @@ from sklearn.datasets import make_regression
 from sklearn.linear_model import LinearRegression as skLinearRegression
 from cuml.linear_model import LinearRegression
 from cuml.common.device_selection import using_device_type, using_memory_type
+import pickle
 
 
 @pytest.mark.parametrize('device_type', ['cpu', 'gpu', None])
@@ -101,6 +102,31 @@ def test_train_cpu_infer_gpu(fit_intercept, normalize):
         cu_pred = model.predict(X_test)
 
     sk_model = skLinearRegression(fit_intercept=fit_intercept,
+                                  normalize=normalize)
+    sk_model.fit(X_train, y_train)
+    sk_pred = sk_model.predict(X_test)
+    np.testing.assert_allclose(sk_pred, cu_pred)
+
+@pytest.mark.parametrize('fit_intercept', [False, True])
+@pytest.mark.parametrize('normalize', [False, True])
+def test_pickle_interop(fit_intercept, normalize):
+    model = LinearRegression(fit_intercept=fit_intercept,
+                             normalize=normalize)
+    with using_device_type('gpu'):
+        model.fit(X_train, y_train)
+
+    with open('model.pickle', 'wb') as pf:
+        pickle.dump(model, pf)
+
+    del model
+
+    with open('model.pickle', 'rb') as pf:
+        pickled_model = pickle.load(pf)
+
+    with using_device_type('cpu'):
+        cu_pred = pickled_model.predict(X_test)
+
+        sk_model = skLinearRegression(fit_intercept=fit_intercept,
                                   normalize=normalize)
     sk_model.fit(X_train, y_train)
     sk_pred = sk_model.predict(X_test)
